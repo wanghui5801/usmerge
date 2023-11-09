@@ -25,6 +25,15 @@ The steps are over here.
 - Obtain the SOM-K derived clusters and conduct relevant analysis.
 
 # Usage
+Note that you should import data with "dataframe" format, and then get a series from the dataframe, it could be the right format of series.
+
+For example
+```
+import pandas as pd
+ex = pd.read_excel("10.xlsx",converters={'证券代码':str})
+data = ex['显性']
+```
+
 If you want to use som-k cluster.
 
 ```
