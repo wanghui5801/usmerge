@@ -38,12 +38,15 @@ If you want to use som-k cluster.
 
 ```
 from usmerge import som_k_merge
-
 result = som_k_merge(data,3,sig=0.5,lr=0.5,echo=1000)
-
 ```
 
 Of course, you could ignore the parameter(sig, lr, echo), I have initialized thiese parameters, but you could change if you want.
+
+Here is the whole method of this packages.
+```
+from usmerge import equal_wid_merge,equal_fre_merge,kmeans_merge,som_k_merge
+```
 
 
 
