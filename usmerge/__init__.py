@@ -10,6 +10,6 @@ from .usmerge import (
     hierarchical_density_merge
 )
 
-__version__ = "0.1.2"
+__version__ = "0.2.0"
 __author__ = "HuiWang"
 __email__ = "huiw1128@gmail.com"

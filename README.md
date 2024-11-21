@@ -1,4 +1,15 @@
+<p align="center">
+  <img src="https://ice.frostsky.com/2024/11/22/eabf1a3e6df982243482db582277b7c2.png" alt="usmerge logo" width="200"/>
+</p>
+
 # Unsupervised Merge
+
+[![PyPI version](https://badge.fury.io/py/usmerge.svg)](https://badge.fury.io/py/usmerge)
+[![Python versions](https://img.shields.io/pypi/pyversions/usmerge.svg)](https://pypi.org/project/usmerge/)
+[![License](https://img.shields.io/github/license/wanghui5801/usmerge.svg)](https://github.com/wanghui5801/usmerge/blob/main/LICENSE)
+[![Downloads](https://static.pepy.tech/badge/usmerge)](https://pepy.tech/project/usmerge)
+[![GitHub last commit](https://img.shields.io/github/last-commit/wanghui5801/usmerge.svg)](https://github.com/wanghui5801/usmerge/commits/main)
+
 
 A simple Python package for one-dimensional data clustering, implementing various clustering algorithms including traditional and novel approaches.
 
