@@ -224,6 +224,13 @@ def som_k_merge(data: Union[List, Tuple, np.ndarray, Sequence],
     
     return labels, edges
 
+def calculate_variance(data):
+    """Helper function to calculate variance for Jenks breaks"""
+    if not data:
+        return 0
+    mean = sum(data) / len(data)
+    return sum((x - mean) ** 2 for x in data) / len(data)
+
 def jenks_breaks_merge(data: Union[List, Tuple, np.ndarray, Sequence], n: int) -> Tuple[List[int], List[float]]:
     """Jenks Natural Breaks optimization clustering
     
@@ -239,57 +246,50 @@ def jenks_breaks_merge(data: Union[List, Tuple, np.ndarray, Sequence], n: int) -
     data = _convert_to_list(data)
     sorted_data = sorted(data)
     
-    # Initialize matrices
-    lower_class_limits = [[0] * (n + 1) for _ in range(len(data) + 1)]
-    variance_combinations = [[0] * (n + 1) for _ in range(len(data) + 1)]
+    # Initialize matrices for dynamic programming
+    n_data = len(sorted_data)
+    variance_combinations = np.zeros((n_data, n))
+    lower_class_limits = np.zeros((n_data, n))
     
-    # Initialize first class
-    variance_combinations[1][1] = 0
-    lower_class_limits[1][1] = 1
+    # Initialize first variance combination
+    variance_combinations[0][0] = calculate_variance(sorted_data[:1])
+    for i in range(1, n_data):
+        variance_combinations[i][0] = calculate_variance(sorted_data[:(i+1)])
+        lower_class_limits[i][0] = 0
     
-    # Calculate variance for all possible combinations
-    for i in range(2, len(data) + 1):
-        variance = 0
-        sum_squares = 0
-        sum_x = 0
-        for j in range(i):
-            val = sorted_data[j]
-            sum_squares += val * val
-            sum_x += val
+    # Complete the dynamic programming matrix
+    for j in range(1, n):
+        for i in range(j, n_data):
+            min_val = float('inf')
+            min_idx = 0
             
-            variance = sum_squares - (sum_x * sum_x) / (j + 1)
-            variance_combinations[i][1] = variance
-            lower_class_limits[i][1] = 1
-            
-    # Find natural breaks
-    for j in range(2, n + 1):
-        for i in range(j + 1, len(data) + 1):
-            variance_combinations[i][j] = float('inf')
-            
-            for k in range(1, i):
-                val = variance_combinations[k][j - 1]
-                val_right = calculate_variance(sorted_data[k:i])
-                if val + val_right < variance_combinations[i][j]:
-                    variance_combinations[i][j] = val + val_right
-                    lower_class_limits[i][j] = k
+            for k in range(j-1, i):
+                val = variance_combinations[k][j-1] + \
+                      calculate_variance(sorted_data[(k+1):(i+1)])
+                if val < min_val:
+                    min_val = val
+                    min_idx = k
+                    
+            variance_combinations[i][j] = min_val
+            lower_class_limits[i][j] = min_idx
     
-    # Create breaks
-    k = len(data)
-    breaks = []
-    breaks.insert(0, sorted_data[k - 1])
-    for j in range(n - 1, 0, -1):
-        k = lower_class_limits[k][j]
-        breaks.insert(0, sorted_data[k - 1])
+    # Get the break points
+    edges = [min(data)]
+    k = n_data - 1
+    for j in range(n-1, 0, -1):
+        idx = int(lower_class_limits[k][j])
+        edges.insert(1, sorted_data[idx + 1])
+        k = idx
+    edges.append(max(data))
     
     # Assign labels
     labels = []
-    edges = [min(data)] + breaks
     for x in data:
         for i in range(n):
             if edges[i] <= x <= edges[i+1]:
                 labels.append(i)
                 break
-                
+    
     return labels, edges
 
 def quantile_merge(data: Union[List, Tuple, np.ndarray, Sequence], n: int) -> Tuple[List[int], List[float]]:
@@ -325,67 +325,99 @@ def quantile_merge(data: Union[List, Tuple, np.ndarray, Sequence], n: int) -> Tu
     return labels, edges
 
 def dbscan_1d_merge(data: Union[List, Tuple, np.ndarray, Sequence], 
-                    eps: float, 
-                    min_samples: int = 2) -> Tuple[List[int], List[float]]:
-    """DBSCAN clustering for 1D data
+                    n: int,
+                    eps: float = None,
+                    min_samples: int = 5,
+                    max_iter: int = 50) -> Tuple[List[int], List[float]]:
+    """DBSCAN clustering adapted for 1D data with target number of clusters
     
     Args:
         data: Input data in various formats
-        eps: Maximum distance between two samples for them to be considered neighbors
-        min_samples: Minimum number of samples in a cluster
+        n: Target number of clusters
+        eps: The maximum distance between points (if None, will be automatically adjusted)
+        min_samples: The number of samples in a neighborhood for a point to be considered core
+        max_iter: Maximum iterations for eps adjustment
         
     Returns:
         Tuple containing:
-            labels: Cluster labels for each data point (-1 indicates noise)
+            labels: Cluster labels for each data point (-1 represents noise)
             edges: Cluster boundaries
     """
     data = _convert_to_list(data)
-    sorted_data = sorted(data)
     
-    # Initialize labels
-    labels = [-1] * len(data)
-    cluster_id = 0
+    if eps is None:
+        # Initialize eps based on data range and target clusters
+        data_range = max(data) - min(data)
+        eps = data_range / (2 * n)
     
-    # Find clusters
-    for i in range(len(sorted_data)):
-        if labels[i] != -1:
-            continue
-            
-        # Find neighbors
+    def run_dbscan(eps_val):
         neighbors = []
-        for j in range(len(sorted_data)):
-            if abs(sorted_data[i] - sorted_data[j]) <= eps:
-                neighbors.append(j)
+        for i in range(len(data)):
+            point_neighbors = []
+            for j in range(len(data)):
+                if abs(data[i] - data[j]) <= eps_val:
+                    point_neighbors.append(j)
+            neighbors.append(point_neighbors)
+        
+        labels = [-1] * len(data)
+        cluster_id = 0
+        
+        # Find core points and expand clusters
+        for i in range(len(data)):
+            if labels[i] != -1:
+                continue
                 
-        if len(neighbors) >= min_samples:
-            # Expand cluster
-            labels[i] = cluster_id
-            for neighbor in neighbors:
-                if labels[neighbor] == -1:
-                    labels[neighbor] = cluster_id
-            cluster_id += 1
+            if len(neighbors[i]) >= min_samples:
+                labels[i] = cluster_id
+                stack = neighbors[i].copy()
+                
+                while stack:
+                    point = stack.pop()
+                    if labels[point] == -1:
+                        labels[point] = cluster_id
+                        if len(neighbors[point]) >= min_samples:
+                            for neighbor in neighbors[point]:
+                                if labels[neighbor] == -1:
+                                    stack.append(neighbor)
+                
+                cluster_id += 1
+        
+        return labels, cluster_id
+    
+    # Binary search to find appropriate eps
+    current_eps = eps
+    iteration = 0
+    while iteration < max_iter:
+        labels, num_clusters = run_dbscan(current_eps)
+        
+        if num_clusters == n:
+            break
+        elif num_clusters < n:
+            current_eps *= 0.8  # Decrease eps to get more clusters
+        else:
+            current_eps *= 1.2  # Increase eps to get fewer clusters
+            
+        iteration += 1
+    
+    # Calculate cluster boundaries
+    if max(labels) < 0:  # No clusters found
+        return labels, [min(data), max(data)]
+    
+    cluster_points = [[] for _ in range(max(labels) + 1)]
+    for i, label in enumerate(labels):
+        if label != -1:
+            cluster_points[label].append(data[i])
     
     # Calculate edges between clusters
     edges = [min(data)]
-    for i in range(1, len(sorted_data)):
-        if labels[i] != labels[i-1]:
-            edges.append((sorted_data[i] + sorted_data[i-1]) / 2)
+    cluster_bounds = [(min(points), max(points)) for points in cluster_points if points]
+    cluster_bounds.sort()
+    
+    for i in range(len(cluster_bounds)-1):
+        edges.append((cluster_bounds[i][1] + cluster_bounds[i+1][0])/2)
     edges.append(max(data))
     
-    # Map original data points to labels
-    original_labels = []
-    for x in data:
-        idx = sorted_data.index(x)
-        original_labels.append(labels[idx])
-        
-    return original_labels, edges
-
-def calculate_variance(data: List[float]) -> float:
-    """Helper function to calculate variance"""
-    if not data:
-        return 0
-    mean = sum(data) / len(data)
-    return sum((x - mean) ** 2 for x in data) / len(data)
+    return labels, edges
 
 def fcm_merge(data: Union[List, Tuple, np.ndarray, Sequence], 
               n: int, 

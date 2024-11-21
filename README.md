@@ -34,6 +34,9 @@ This package provides multiple one-dimensional clustering methods:
 - Information Theoretic (information_merge)
 - Gaussian Mixture (gaussian_mixture_merge)
 - Hierarchical Density (hierarchical_density_merge)
+- Jenks Natural Breaks (jenks_breaks_merge)
+- Quantile-based (quantile_merge)
+- DBSCAN (dbscan_1d_merge)
 
 ## Usage
 
@@ -84,6 +87,24 @@ from usmerge import kernel_density_merge
 labels, edges = kernel_density_merge(data, n=3, bandwidth=None)
 ```
 
+4. Jenks Natural Breaks:
+```python
+from usmerge import jenks_breaks_merge
+labels, edges = jenks_breaks_merge(data, n=3)
+```
+
+5. Quantile-based Clustering:
+```python
+from usmerge import quantile_merge
+labels, edges = quantile_merge(data, n=3)
+```
+
+6. DBSCAN Clustering:
+```python
+from usmerge import dbscan_1d_merge
+labels, edges = dbscan_1d_merge(data, n=3, min_samples=3)
+```
+
 ### Return Values
 All clustering methods return two values:
 - labels: List of cluster labels for each data point
@@ -94,7 +115,7 @@ All clustering methods return two values:
 ```python
 import numpy as np
 import matplotlib.pyplot as plt
-from usmerge import som_k_merge, fcm_merge, kmeans_merge, hierarchical_density_merge
+from usmerge import som_k_merge, fcm_merge, kmeans_merge, hierarchical_density_merge, dbscan_1d_merge
 
 # Generate synthetic data with three clear clusters
 np.random.seed(42)
@@ -109,13 +130,14 @@ methods = {
     'SOM-K': som_k_merge(data, n=3, sigma=0.5, learning_rate=0.5, epochs=1000),
     'FCM': fcm_merge(data, n=3, m=2.0, max_iter=100),
     'K-means': kmeans_merge(data, n=3),
+    'DBSCAN': dbscan_1d_merge(data, n=3, min_samples=3),
     'Hierarchical Density': hierarchical_density_merge(data, n=3)
 }
 
 # Visualize results
-plt.figure(figsize=(15, 4))
+plt.figure(figsize=(15, 5))
 for i, (name, (labels, edges)) in enumerate(methods.items(), 1):
-    plt.subplot(1, 4, i)
+    plt.subplot(1, 5, i)
     plt.scatter(data, np.zeros_like(data), c=labels, cmap='viridis')
     plt.title(f'{name} Clustering')
     # Plot cluster boundaries
@@ -137,6 +159,9 @@ Each clustering method has its own set of parameters:
 - Information Theoretic: `alpha` (compression-accuracy trade-off)
 - Gaussian Mixture: `max_iter`, `epsilon` (convergence threshold)
 - Hierarchical Density: `min_cluster_size` (minimum points per cluster)
+- Jenks Natural Breaks: Only requires number of clusters
+- Quantile-based: Only requires number of clusters
+- DBSCAN: `n` (target number of clusters), `eps` (optional neighborhood size), `min_samples` (minimum points in cluster), `max_iter` (maximum iterations for eps adjustment)
 
 ## Contributing
 

@@ -9,7 +9,9 @@ from usmerge import (
     kernel_density_merge,
     information_merge,
     gaussian_mixture_merge,
-    hierarchical_density_merge
+    hierarchical_density_merge,
+    jenks_breaks_merge,
+    dbscan_1d_merge
 )
 import pandas as pd
 
@@ -65,3 +67,23 @@ def test_input_formats():
     assert len(labels1) == len(data)
     assert len(labels2) == len(data)
     assert len(labels3) == len(data)
+
+def test_jenks_breaks_merge(sample_data):
+    labels, edges = jenks_breaks_merge(sample_data, n=3)
+    assert len(labels) == len(sample_data)
+    assert len(edges) == 4
+    assert all(isinstance(x, int) for x in labels)
+    assert all(0 <= x < 3 for x in labels)
+
+def test_dbscan_merge(sample_data):
+    # Test with specified number of clusters
+    labels, edges = dbscan_1d_merge(sample_data, n=3, min_samples=3)
+    assert len(labels) == len(sample_data)
+    assert len(edges) >= 2
+    assert all(isinstance(x, int) for x in labels)
+    assert -1 <= max(labels) <= 3  # Allow for noise points (-1)
+    
+    # Test with manual eps
+    labels2, edges2 = dbscan_1d_merge(sample_data, n=3, eps=1.0, min_samples=3)
+    assert len(labels2) == len(sample_data)
+    assert len(edges2) >= 2
