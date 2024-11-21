@@ -6,13 +6,14 @@ with open(os.path.join(os.path.dirname(__file__), "README.md"), encoding="utf-8"
 
 setup(
     name="usmerge",
-    version="0.1.1",
+    version="0.1.2",
     description="A simple package to merge one-dimension data by unsupervised method",
     author="HuiWang",
     author_email="huiw1128@gmail.com",
     packages=find_packages(),
     install_requires=[
-        "pandas","minisom","numpy","sklearn"
+        "pandas>=1.0.0",
+        "numpy>=1.18.0"
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
